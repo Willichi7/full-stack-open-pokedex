@@ -6,7 +6,7 @@ on:
    - main
 jobs: 
  simple_deployment_pipeline:
-  runs-on: unbuntu-20.04
+  runs-on: Ubuntu-20.04
   steps:
    - uses: actions/checkout@v4
    - uses: actions/setup-node@v4
