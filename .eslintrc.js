@@ -34,11 +34,11 @@ module.exports = {
       'single'
     ],
     'semi': [
-      'warn',
+      'error',
       'never'
     ],
     'eqeqeq': 'error',
-    'no-trailing-spaces': 'warn',
+    'no-trailing-spaces': 'error',
     'object-curly-spacing': [
       'warn', 'always'
     ],
