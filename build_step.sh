@@ -1,8 +1,7 @@
 #!/bin/bash
 
-# Stop on errors and show commands
-set -e
-set -x
+# test script build
+echo "Build script"
 
 # Install dependencies
 npm install
