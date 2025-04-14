@@ -49,6 +49,7 @@ jobs:
   deploy_to_render:
     name: Deploy to Render
     needs: simple_deployment_pipeline
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     steps:
       - name: Trigger deployment
