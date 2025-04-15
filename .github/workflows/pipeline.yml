@@ -47,10 +47,30 @@ jobs:
           path: playwright-report/
           retention-days: 30
 
+  check_skip:
+    name: Check for #skip in commits
+    runs-on: ubuntu-20.04
+    needs: simple_deployment_pipeline
+    outputs:
+      should_skip: ${{ steps.check.outputs.should_skip }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check commit messages for #skip
+        id: check
+        run: |
+          echo "Checking for #skip in commit messages..."
+          if git log -1 --pretty=%B | grep -q "#skip"; then
+            echo "should_skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_skip=false" >> $GITHUB_OUTPUT
+          fi
+
   deploy_to_render:
     name: Deploy to Render
-    needs: simple_deployment_pipeline
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    needs: check_skip
+    if: ${{ needs.check_skip.outputs.should_skip == 'false' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     steps:
       - name: Trigger deployment
