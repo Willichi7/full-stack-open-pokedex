@@ -55,6 +55,30 @@ jobs:
           path: playwright-report/
           retention-days: 30
 
+      - name: Test Success
+        if: success()
+        uses: rjstone/discord-webhook-notify@v1
+        with:
+          severity: info
+          details: Test Succeeded!
+          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
+
+      - name: Test Failure
+        if: failure()
+        uses: rjstone/discord-webhook-notify@v1
+        with:
+          severity: error
+          details: Test Failed!
+          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
+
+      - name: Test Cancelled
+        if: cancelled()
+        uses: rjstone/discord-webhook-notify@v1
+        with:
+          severity: warn
+          details: Test Cancelled!
+          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
+
   check_skip:
     name: Check for #skip in commits
     runs-on: ubuntu-latest
@@ -87,8 +111,8 @@ jobs:
           serviceId: ${{ secrets.RENDER_SERVICE_ID }}
           apiKey: ${{ secrets.RENDER_API_KEY }}
 
-  tag_and_notify:
-    name: Tag Release and Notify
+  tag_release:
+    name: Tag Release
     needs: deploy_to_render
     if: ${{ success() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
@@ -104,53 +128,3 @@ jobs:
           DEFAULT_BRANCH: main
           WITH_V: true
           RELEASE_BRANCHES: main
-
-      - name: Notify Discord (Success)
-        run: |
-          curl -H "Content-Type: application/json" \
-          -X POST \
-          -d '{
-            "embeds": [{
-              "title": "✅ New version deployed",
-              "description": "A new version has been deployed and tagged on the `main` branch.",
-              "url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
-              "color": 3066993,
-              "footer": {
-                "text": "Severity: Informational"
-              },
-              "timestamp": "'$(date --utc +%Y-%m-%dT%H:%M:%SZ)'"
-            }]
-          }' \
-          ${{ secrets.DISCORD_WEBHOOK }}
-
-  notify_failure:
-    name: Notify Discord on Failure
-    if: failure()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Get commit details
-        id: commit
-        run: |
-          echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
-          echo "author=$(git log -1 --pretty=format:'%an')" >> $GITHUB_OUTPUT
-          echo "message=$(git log -1 --pretty=format:'%s')" >> $GITHUB_OUTPUT
-
-      - name: Notify Discord (Failure)
-        run: |
-          curl -H "Content-Type: application/json" \
-          -X POST \
-          -d '{
-            "embeds": [{
-              "title": "❌ Build failed",
-              "description": "Commit: [${{ steps.commit.outputs.sha }}](https://github.com/${{ github.repository }}/commit/${{ steps.commit.outputs.sha }}) by ${{ steps.commit.outputs.author }} broke the build.\n\nMessage: `${{ steps.commit.outputs.message }}`",
-              "color": 15158332,
-              "footer": {
-                "text": "Severity: Error"
-              },
-              "timestamp": "'$(date --utc +%Y-%m-%dT%H:%M:%SZ)'"
-            }]
-          }' \
-          ${{ secrets.DISCORD_WEBHOOK }}
