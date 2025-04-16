@@ -11,7 +11,7 @@ on:
 jobs:
   simple_deployment_pipeline:
     name: Lint, Build, Test
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -56,8 +56,8 @@ jobs:
           retention-days: 30
 
   check_skip:
-    name: Check for #skip in commits
-    runs-on: ubuntu-20.04
+    name: Check for 
+    runs-on: ubuntu-latest
     needs: simple_deployment_pipeline
     outputs:
       should_skip: ${{ steps.check.outputs.should_skip }}
@@ -65,7 +65,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Check commit messages for #skip
+      - name: Check commit messages for 
         id: check
         run: |
           echo "Checking for #skip in commit messages..."
@@ -90,7 +90,7 @@ jobs:
     name: Tag Release and Notify
     needs: deploy_to_render
     if: ${{ success() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -116,7 +116,7 @@ jobs:
   notify_failure:
     name: Notify Failure
     if: failure()
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
