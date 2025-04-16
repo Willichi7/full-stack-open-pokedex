@@ -62,7 +62,7 @@ jobs:
           args: |
             ✅ CI Passed!
             Branch: `${{ github.ref_name }}`
-            Commit: ${{ github.sha }}
+            Commit: [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
             Actor: ${{ github.actor }}
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
@@ -74,7 +74,7 @@ jobs:
           args: |
             ❌ CI Failed!
             Branch: `${{ github.ref_name }}`
-            Commit: ${{ github.sha }}
+            Commit: [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
             Actor: ${{ github.actor }}
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
@@ -86,7 +86,7 @@ jobs:
           args: |
             ⚠️ CI Cancelled!
             Branch: `${{ github.ref_name }}`
-            Commit: ${{ github.sha }}
+            Commit: [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
             Actor: ${{ github.actor }}
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
@@ -129,7 +129,7 @@ jobs:
             🚀 Deployment succeeded and passed health check!
             ✅ Live: https://full-stack-open-pokedex-i3nu.onrender.com
             Branch: `${{ github.ref_name }}`
-            Commit: ${{ github.sha }}
+            Commit: [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
             Actor: ${{ github.actor }}
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
