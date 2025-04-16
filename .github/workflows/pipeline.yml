@@ -55,32 +55,41 @@ jobs:
           path: playwright-report/
           retention-days: 30
 
-      - name: Send Discord success notification
+      - name: Notify Test Success
         if: success()
-        run: |
-          curl -H "Content-Type: application/json" \
-               -X POST \
-               -d "{\"content\": \"✅ Test Succeeded!\"}" \
-               ${{ secrets.DISCORD_WEBHOOK }}
+        uses: rjstone/discord-webhook-notify@v1
+        with:
+          severity: info
+          details: |
+            ✅ CI Passed!
+            Branch: `${{ github.ref_name }}`
+            Commit: ${{ github.sha }}
+            Actor: ${{ github.actor }}
+          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
 
-      - name: Send Discord failure notification
+      - name: Notify Test Failure
         if: failure()
-        run: |
-          COMMIT_MESSAGE=$(git log -1 --pretty=%s)
-          COMMIT_AUTHOR=$(git log -1 --pretty=%an)
-          COMMIT_SHA=$(git rev-parse --short HEAD)
-          curl -H "Content-Type: application/json" \
-               -X POST \
-               -d "{\"content\": \"❌ Test Failed!\nCommit: [$COMMIT_SHA](${{ github.server_url }}/${{ github.repository }}/commit/${COMMIT_SHA})\nAuthor: $COMMIT_AUTHOR\nMessage: $COMMIT_MESSAGE\"}" \
-               ${{ secrets.DISCORD_WEBHOOK }}
+        uses: rjstone/discord-webhook-notify@v1
+        with:
+          severity: error
+          details: |
+            ❌ CI Failed!
+            Branch: `${{ github.ref_name }}`
+            Commit: ${{ github.sha }}
+            Actor: ${{ github.actor }}
+          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
 
-      - name: Send Discord cancelled notification
+      - name: Notify Test Cancelled
         if: cancelled()
-        run: |
-          curl -H "Content-Type: application/json" \
-               -X POST \
-               -d "{\"content\": \"⚠️ Test Cancelled!\"}" \
-               ${{ secrets.DISCORD_WEBHOOK }}
+        uses: rjstone/discord-webhook-notify@v1
+        with:
+          severity: warn
+          details: |
+            ⚠️ CI Cancelled!
+            Branch: `${{ github.ref_name }}`
+            Commit: ${{ github.sha }}
+            Actor: ${{ github.actor }}
+          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
 
   deploy_to_render:
     name: Deploy to Render
@@ -113,9 +122,14 @@ jobs:
     needs: health_check
     runs-on: ubuntu-latest
     steps:
-      - name: Send deployment notification to Discord
-        run: |
-          curl -H "Content-Type: application/json" \
-               -X POST \
-               -d "{\"content\": \"🚀 Deployment successful and passed health check at https://full-stack-open-pokedex-i3nu.onrender.com\"}" \
-               ${{ secrets.DISCORD_WEBHOOK }}
+      - name: Notify Success on Discord
+        uses: rjstone/discord-webhook-notify@v1
+        with:
+          severity: info
+          details: |
+            🚀 Deployment succeeded and passed health check!
+            ✅ Live: https://full-stack-open-pokedex-i3nu.onrender.com
+            Branch: `${{ github.ref_name }}`
+            Commit: ${{ github.sha }}
+            Actor: ${{ github.actor }}
+          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
