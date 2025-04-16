@@ -57,39 +57,39 @@ jobs:
 
       - name: Notify Test Success
         if: success()
-        uses: BubbleProd/discord-webhook-notify@v2
+        uses: Ilshidur/action-discord@master
         with:
-          severity: info
-          details: |
+          args: |
             ✅ CI Passed!
             Branch: `${{ github.ref_name }}`
             Commit: ${{ github.sha }}
             Actor: ${{ github.actor }}
-          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
 
       - name: Notify Test Failure
         if: failure()
-        uses: BubbleProd/discord-webhook-notify@v2
+        uses: Ilshidur/action-discord@master
         with:
-          severity: error
-          details: |
+          args: |
             ❌ CI Failed!
             Branch: `${{ github.ref_name }}`
             Commit: ${{ github.sha }}
             Actor: ${{ github.actor }}
-          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
 
       - name: Notify Test Cancelled
         if: cancelled()
-        uses: BubbleProd/discord-webhook-notify@v2
+        uses: Ilshidur/action-discord@master
         with:
-          severity: warn
-          details: |
+          args: |
             ⚠️ CI Cancelled!
             Branch: `${{ github.ref_name }}`
             Commit: ${{ github.sha }}
             Actor: ${{ github.actor }}
-          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
 
   deploy_to_render:
     name: Deploy to Render
@@ -123,13 +123,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Notify Success on Discord
-        uses: BubbleProd/discord-webhook-notify@v2
+        uses: Ilshidur/action-discord@master
         with:
-          severity: info
-          details: |
+          args: |
             🚀 Deployment succeeded and passed health check!
             ✅ Live: https://full-stack-open-pokedex-i3nu.onrender.com
             Branch: `${{ github.ref_name }}`
             Commit: ${{ github.sha }}
             Actor: ${{ github.actor }}
-          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
