@@ -55,31 +55,37 @@ jobs:
           path: playwright-report/
           retention-days: 30
 
-  check_skip:
-    name: Check for #skip in commits
-    runs-on: ubuntu-latest
-    needs: simple_deployment_pipeline
-    outputs:
-      should_skip: ${{ steps.check.outputs.should_skip }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Check commit messages for #skip
-        id: check
+      - name: Send Discord success notification
+        if: success()
         run: |
-          echo "Checking for #skip in commit messages..."
-          if git log -1 --pretty=%B | grep -q "#skip"; then
-            echo "should_skip=true" >> $GITHUB_OUTPUT
-          else
-            echo "should_skip=false" >> $GITHUB_OUTPUT
-          fi
+          curl -H "Content-Type: application/json" \
+               -X POST \
+               -d "{\"content\": \"✅ Test Succeeded!\"}" \
+               ${{ secrets.DISCORD_WEBHOOK }}
 
+      - name: Send Discord failure notification
+        if: failure()
+        run: |
+          COMMIT_MESSAGE=$(git log -1 --pretty=%s)
+          COMMIT_AUTHOR=$(git log -1 --pretty=%an)
+          COMMIT_SHA=$(git rev-parse --short HEAD)
+          curl -H "Content-Type: application/json" \
+               -X POST \
+               -d "{\"content\": \"❌ Test Failed!\nCommit: [$COMMIT_SHA](${{ github.server_url }}/${{ github.repository }}/commit/${COMMIT_SHA})\nAuthor: $COMMIT_AUTHOR\nMessage: $COMMIT_MESSAGE\"}" \
+               ${{ secrets.DISCORD_WEBHOOK }}
+
+      - name: Send Discord cancelled notification
+        if: cancelled()
+        run: |
+          curl -H "Content-Type: application/json" \
+               -X POST \
+               -d "{\"content\": \"⚠️ Test Cancelled!\"}" \
+               ${{ secrets.DISCORD_WEBHOOK }}
 
   deploy_to_render:
     name: Deploy to Render
-    needs: check_skip
-    if: ${{ needs.check_skip.outputs.should_skip == 'false' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    needs: simple_deployment_pipeline
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     steps:
       - name: Trigger deployment
@@ -88,55 +94,28 @@ jobs:
           serviceId: ${{ secrets.RENDER_SERVICE_ID }}
           apiKey: ${{ secrets.RENDER_API_KEY }}
 
-  tag_and_notify:
-    name: Tag Release and Notify
+  health_check:
+    name: Check the deployed service URL
     needs: deploy_to_render
-    if: ${{ success() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Bump version and push tag
-        uses: anothrNick/github-tag-action@1.64.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DEFAULT_BUMP: patch
-          DEFAULT_BRANCH: main
-          WITH_V: true
-          RELEASE_BRANCHES: main
-
-      - name: Notify success
-        uses: rjstone/discord-webhook-notify@v1
+      - name: Check service health
+        uses: jtalk/url-health-check-action@v4
         with:
-          severity: info
-          details: |
-            ✅ Deployment Successful!
-            A new version has been deployed and tagged on main branch.
-          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
+          url: https://full-stack-open-pokedex-i3nu.onrender.com
+          follow-redirect: false
+          max-attempts: 3
+          retry-delay: 5s
+          retry-all: false
 
-  notify_failure:
-    name: Notify Failure
-    if: failure()
+  notify_success:
+    name: Notify Deployment Success
+    needs: health_check
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Get last commit info
-        id: commit
+      - name: Send deployment notification to Discord
         run: |
-          echo "message=$(git log -1 --pretty=format:'%s')" >> $GITHUB_OUTPUT
-          echo "author=$(git log -1 --pretty=format:'%an')" >> $GITHUB_OUTPUT
-          echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-
-      - name: Send Discord failure notification
-        uses: rjstone/discord-webhook-notify@v1
-        with:
-          severity: error
-          details: |
-            ❌ Build Failed!
-            Commit: ${{ steps.commit.outputs.sha }}
-            Author: ${{ steps.commit.outputs.author }}
-            Message: ${{ steps.commit.outputs.message }}
-          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
+          curl -H "Content-Type: application/json" \
+               -X POST \
+               -d "{\"content\": \"🚀 Deployment successful and passed health check at https://full-stack-open-pokedex-i3nu.onrender.com\"}" \
+               ${{ secrets.DISCORD_WEBHOOK }}
