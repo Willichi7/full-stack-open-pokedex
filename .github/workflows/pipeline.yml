@@ -15,7 +15,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -75,7 +75,6 @@ jobs:
             echo "should_skip=false" >> $GITHUB_OUTPUT
           fi
 
-
   deploy_to_render:
     name: Deploy to Render
     needs: check_skip
@@ -106,37 +105,52 @@ jobs:
           WITH_V: true
           RELEASE_BRANCHES: main
 
-      - name: Notify success
-        uses: rjstone/discord-webhook-notify@v1
-        with:
-          severity: info
-          details: |
-            ✅ Deployment Successful!
-            A new version has been deployed and tagged on the main branch.
-          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
+      - name: Notify Discord (Success)
+        run: |
+          curl -H "Content-Type: application/json" \
+          -X POST \
+          -d '{
+            "embeds": [{
+              "title": "✅ New version deployed",
+              "description": "A new version has been deployed and tagged on the `main` branch.",
+              "url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+              "color": 3066993,
+              "footer": {
+                "text": "Severity: Informational"
+              },
+              "timestamp": "'$(date --utc +%Y-%m-%dT%H:%M:%SZ)'"
+            }]
+          }' \
+          ${{ secrets.DISCORD_WEBHOOK }}
 
   notify_failure:
-    name: Notify Failure
+    name: Notify Discord on Failure
     if: failure()
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Get last commit info
+      - name: Get commit details
         id: commit
         run: |
-          echo "message=$(git log -1 --pretty=format:'%s')" >> $GITHUB_OUTPUT
+          echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
           echo "author=$(git log -1 --pretty=format:'%an')" >> $GITHUB_OUTPUT
-          echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "message=$(git log -1 --pretty=format:'%s')" >> $GITHUB_OUTPUT
 
-      - name: Send Discord failure notification
-        uses: rjstone/discord-webhook-notify@v1
-        with:
-          severity: error
-          details: |
-            ❌ Build Failed!
-            Commit: ${{ steps.commit.outputs.sha }}
-            Author: ${{ steps.commit.outputs.author }}
-            Message: ${{ steps.commit.outputs.message }}
-          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
+      - name: Notify Discord (Failure)
+        run: |
+          curl -H "Content-Type: application/json" \
+          -X POST \
+          -d '{
+            "embeds": [{
+              "title": "❌ Build failed",
+              "description": "Commit: [${{ steps.commit.outputs.sha }}](https://github.com/${{ github.repository }}/commit/${{ steps.commit.outputs.sha }}) by ${{ steps.commit.outputs.author }} broke the build.\n\nMessage: `${{ steps.commit.outputs.message }}`",
+              "color": 15158332,
+              "footer": {
+                "text": "Severity: Error"
+              },
+              "timestamp": "'$(date --utc +%Y-%m-%dT%H:%M:%SZ)'"
+            }]
+          }' \
+          ${{ secrets.DISCORD_WEBHOOK }}
