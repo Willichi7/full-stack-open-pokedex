@@ -15,6 +15,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Notify success
+        uses: rjstone/discord-webhook-notify@v1
+        with:
+          severity: info
+          details: |
+            ✅ Deployment Successful!
+            A new version has been deployed and tagged on the main branch.
+          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
