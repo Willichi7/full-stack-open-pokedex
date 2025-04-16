@@ -73,6 +73,8 @@ jobs:
             echo "should_skip=true" >> $GITHUB_OUTPUT
           else
             echo "should_skip=false" >> $GITHUB_OUTPUT
+          fi
+
 
   deploy_to_render:
     name: Deploy to Render
