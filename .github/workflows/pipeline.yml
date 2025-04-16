@@ -55,76 +55,29 @@ jobs:
           path: playwright-report/
           retention-days: 30
 
-      - name: Test Success
+      - name: Send Discord success notification
         if: success()
-        uses: rjstone/discord-webhook-notify@v1
-        with:
-          severity: info
-          details: Test Succeeded!
-          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
-
-      - name: Test Failure
-        if: failure()
-        uses: rjstone/discord-webhook-notify@v1
-        with:
-          severity: error
-          details: Test Failed!
-          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
-
-      - name: Test Cancelled
-        if: cancelled()
-        uses: rjstone/discord-webhook-notify@v1
-        with:
-          severity: warn
-          details: Test Cancelled!
-          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
-
-  check_skip:
-    name: Check for #skip in commits
-    runs-on: ubuntu-latest
-    needs: simple_deployment_pipeline
-    outputs:
-      should_skip: ${{ steps.check.outputs.should_skip }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Check commit messages for #skip
-        id: check
         run: |
-          echo "Checking for #skip in commit messages..."
-          if git log -1 --pretty=%B | grep -q "#skip"; then
-            echo "should_skip=true" >> $GITHUB_OUTPUT
-          else
-            echo "should_skip=false" >> $GITHUB_OUTPUT
-          fi
+          curl -H "Content-Type: application/json" \
+               -X POST \
+               -d "{\"content\": \"✅ Test Succeeded!\"}" \
+               ${{ secrets.DISCORD_WEBHOOK }}
 
-  deploy_to_render:
-    name: Deploy to Render
-    needs: check_skip
-    if: ${{ needs.check_skip.outputs.should_skip == 'false' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Trigger deployment
-        uses: sws2apps/render-deployment@main
-        with:
-          serviceId: ${{ secrets.RENDER_SERVICE_ID }}
-          apiKey: ${{ secrets.RENDER_API_KEY }}
+      - name: Send Discord failure notification
+        if: failure()
+        run: |
+          COMMIT_MESSAGE=$(git log -1 --pretty=%s)
+          COMMIT_AUTHOR=$(git log -1 --pretty=%an)
+          COMMIT_SHA=$(git rev-parse --short HEAD)
+          curl -H "Content-Type: application/json" \
+               -X POST \
+               -d "{\"content\": \"❌ Test Failed!\nCommit: [$COMMIT_SHA](${{ github.server_url }}/${{ github.repository }}/commit/${COMMIT_SHA})\nAuthor: $COMMIT_AUTHOR\nMessage: $COMMIT_MESSAGE\"}" \
+               ${{ secrets.DISCORD_WEBHOOK }}
 
-  tag_release:
-    name: Tag Release
-    needs: deploy_to_render
-    if: ${{ success() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Bump version and push tag
-        uses: anothrNick/github-tag-action@1.64.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DEFAULT_BUMP: patch
-          DEFAULT_BRANCH: main
-          WITH_V: true
-          RELEASE_BRANCHES: main
+      - name: Send Discord cancelled notification
+        if: cancelled()
+        run: |
+          curl -H "Content-Type: application/json" \
+               -X POST \
+               -d "{\"content\": \"⚠️ Test Cancelled!\"}" \
+               ${{ secrets.DISCORD_WEBHOOK }}
