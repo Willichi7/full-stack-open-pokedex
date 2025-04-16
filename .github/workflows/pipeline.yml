@@ -21,6 +21,14 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Cache node modules
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
       - name: Install dependencies
         run: npm install
 
@@ -65,7 +73,6 @@ jobs:
             echo "should_skip=true" >> $GITHUB_OUTPUT
           else
             echo "should_skip=false" >> $GITHUB_OUTPUT
-          fi
 
   deploy_to_render:
     name: Deploy to Render
@@ -79,8 +86,8 @@ jobs:
           serviceId: ${{ secrets.RENDER_SERVICE_ID }}
           apiKey: ${{ secrets.RENDER_API_KEY }}
 
-  tag_release:
-    name: Bump Version and Tag
+  tag_and_notify:
+    name: Tag Release and Notify
     needs: deploy_to_render
     if: ${{ success() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-20.04
@@ -96,3 +103,38 @@ jobs:
           DEFAULT_BRANCH: main
           WITH_V: true
           RELEASE_BRANCHES: main
+
+      - name: Notify success
+        uses: rjstone/discord-webhook-notify@v1
+        with:
+          severity: info
+          details: |
+            ✅ Deployment Successful!
+            A new version has been deployed and tagged on main branch.
+          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
+
+  notify_failure:
+    name: Notify Failure
+    if: failure()
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get last commit info
+        id: commit
+        run: |
+          echo "message=$(git log -1 --pretty=format:'%s')" >> $GITHUB_OUTPUT
+          echo "author=$(git log -1 --pretty=format:'%an')" >> $GITHUB_OUTPUT
+          echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Send Discord failure notification
+        uses: rjstone/discord-webhook-notify@v1
+        with:
+          severity: error
+          details: |
+            ❌ Build Failed!
+            **Commit**: ${{ steps.commit.outputs.sha }}
+            **Author**: ${{ steps.commit.outputs.author }}
+            **Message**: ${{ steps.commit.outputs.message }}
+          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
