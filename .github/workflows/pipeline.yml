@@ -55,44 +55,41 @@ jobs:
           path: playwright-report/
           retention-days: 30
 
-      - name: Send Discord success notification
+      - name: Notify Test Success
         if: success()
-        run: |
-          curl -H "Content-Type: application/json" \
-               -X POST \
-               -d "{\"content\": \"✅ Test Succeeded!\"}" \
-               ${{ secrets.DISCORD_WEBHOOK }}
+        uses: BubbleProd/discord-webhook-notify@v2
+        with:
+          severity: info
+          details: |
+            ✅ CI Passed!
+            Branch: `${{ github.ref_name }}`
+            Commit: ${{ github.sha }}
+            Actor: ${{ github.actor }}
+          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
 
-      - name: Send Discord failure notification
+      - name: Notify Test Failure
         if: failure()
-        run: |
-          COMMIT_MESSAGE=$(git log -1 --pretty=%s)
-          COMMIT_AUTHOR=$(git log -1 --pretty=%an)
-          COMMIT_SHA=$(git rev-parse --short HEAD)
-          curl -X POST \
-          -H "Content-Type: application/json" \
-          -d '{
-            "embeds": [
-              {
-                "title": "❌ Build failed",
-                "description": "Commit [7418d335...](https://github.com/your-repo/commit/7418d3352ca4e6b8adad9c93f14cb9fe75652b99) by **your-username** broke the build 😞",
-                "color": 16711680,
-                "footer": {
-                  "text": "Severity: Error • $(date)"
-                }
-              }
-            ]
-          }' \
-          ${{ secrets.DISCORD_WEBHOOK }}
+        uses: BubbleProd/discord-webhook-notify@v2
+        with:
+          severity: error
+          details: |
+            ❌ CI Failed!
+            Branch: `${{ github.ref_name }}`
+            Commit: ${{ github.sha }}
+            Actor: ${{ github.actor }}
+          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
 
-
-      - name: Send Discord cancelled notification
+      - name: Notify Test Cancelled
         if: cancelled()
-        run: |
-          curl -H "Content-Type: application/json" \
-               -X POST \
-               -d "{\"content\": \"⚠️ Test Cancelled!\"}" \
-               ${{ secrets.DISCORD_WEBHOOK }}
+        uses: BubbleProd/discord-webhook-notify@v2
+        with:
+          severity: warn
+          details: |
+            ⚠️ CI Cancelled!
+            Branch: `${{ github.ref_name }}`
+            Commit: ${{ github.sha }}
+            Actor: ${{ github.actor }}
+          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
 
   deploy_to_render:
     name: Deploy to Render
@@ -125,21 +122,14 @@ jobs:
     needs: health_check
     runs-on: ubuntu-latest
     steps:
-      - name: Send deployment notification to Discord
-        run: |
-         curl -X POST \
-          -H "Content-Type: application/json" \
-          -d '{
-            "embeds": [
-              {
-                "title": "🚀 A new version of Pokedex deployed",
-                "description": "to [https://full-stack-open-pokedex-i3nu.onrender.com](https://full-stack-open-pokedex-i3nu.onrender.com) by **your-username**",
-                "color": 65280,
-                "footer": {
-                  "text": "Severity: Informational • $(date)"
-                }
-              }
-            ]
-          }' \
-          ${{ secrets.DISCORD_WEBHOOK }}
-
+      - name: Notify Success on Discord
+        uses: BubbleProd/discord-webhook-notify@v2
+        with:
+          severity: info
+          details: |
+            🚀 Deployment succeeded and passed health check!
+            ✅ Live: https://full-stack-open-pokedex-i3nu.onrender.com
+            Branch: `${{ github.ref_name }}`
+            Commit: ${{ github.sha }}
+            Actor: ${{ github.actor }}
+          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
