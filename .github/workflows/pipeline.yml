@@ -107,13 +107,23 @@ jobs:
           RELEASE_BRANCHES: main
 
       - name: Notify success
-        uses: rjstone/discord-webhook-notify@v1
-        with:
-          severity: info
-          details: |
-            ✅ Deployment Successful!
-            A new version has been deployed and tagged on main branch.
-          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
+        run: |
+          curl -H "Content-Type: application/json" \
+          -X POST \
+          -d '{
+            "embeds": [{
+              "title": "✅ New version deployed",
+              "description": "A new version has been deployed and tagged on the `main` branch.",
+              "url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+              "color": 3066993,
+              "footer": {
+                "text": "Severity: Informational"
+              },
+              "timestamp": "'$(date --utc +%Y-%m-%dT%H:%M:%SZ)'"
+            }]
+          }' \
+          ${{ secrets.DISCORD_WEBHOOK }}
+        
 
   notify_failure:
     name: Notify Failure
